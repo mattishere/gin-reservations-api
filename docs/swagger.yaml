@@ -1,0 +1,384 @@
+basePath: /
+definitions:
+  endpoints.ChangeConnectorStateRequest:
+    properties:
+      state:
+        type: string
+    type: object
+  endpoints.ChargeRequest:
+    properties:
+      userId:
+        type: string
+    type: object
+  endpoints.CreateChargepointRequest:
+    properties:
+      connectors:
+        type: integer
+    type: object
+  endpoints.CreateUserRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  endpoints.ReservationRequest:
+    properties:
+      minutes:
+        type: integer
+      userId:
+        type: string
+    type: object
+  models.Chargepoint:
+    properties:
+      connectors:
+        items:
+          $ref: '#/definitions/models.Connector'
+        type: array
+      id:
+        type: string
+    type: object
+  models.Connector:
+    properties:
+      id:
+        type: integer
+      state:
+        type: string
+    type: object
+  models.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  models.MessageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  models.Reservation:
+    properties:
+      chargepoint:
+        type: string
+      chargingTime:
+        type: string
+      connector:
+        type: integer
+      expiryTime:
+        type: string
+      hasFinishedCharging:
+        type: boolean
+      hasStartedCharging:
+        type: boolean
+      id:
+        description: 'Suggestion for IDs: currently, we use UnixNano() for the ID
+          because for the demonstration, it is sufficient, but I would recommend swapping
+          to something like Mongo ObjectIDs because they''re less likely to conflict.
+          For the demo, it''s fine!'
+        type: integer
+      userId:
+        type: string
+    type: object
+  models.User:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: A reservation API project assignment.
+  title: Reservations API
+  version: Preview 1.0.0
+paths:
+  /changestate/{chargepointID}/{connectorID}:
+    post:
+      consumes:
+      - application/json
+      description: 'Experimental feature that allows use of all the possible connector
+        states. This is useful when debugging, but can create possible edge cases
+        (Suggestion: only use it on "Available" connectors since those will never
+        have a reservation). The body parameter "state" can be either "Available",
+        "Unavailable", "Charging" or "Reserved". A possible use case for this endpoint
+        would be maintenance on a connector, setting it to "Unavailable".'
+      parameters:
+      - description: Chargepoint ID
+        in: path
+        name: chargepointID
+        required: true
+        type: string
+      - description: Connector ID
+        in: path
+        name: connectorID
+        required: true
+        type: integer
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/endpoints.ChangeConnectorStateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Forcefully change the state of a connector
+      tags:
+      - Experimental
+  /charge/{chargepointID}/{connectorID}:
+    post:
+      consumes:
+      - application/json
+      description: For a user to begin charging, they need to have an open reservation
+        for the chargepoint and connector. They need to connect in the 10 minute "expiry"
+        time period (time of reservation + 10 minutes), otherwise the reservation
+        ends. If the user does connect in time, then they charge for the remainder
+        of the "charging" time period specified in the reservation.
+      parameters:
+      - description: Chargepoint ID
+        in: path
+        name: chargepointID
+        required: true
+        type: string
+      - description: Connector ID
+        in: path
+        name: connectorID
+        required: true
+        type: integer
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/endpoints.ChargeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Start charging
+      tags:
+      - Chargepoints
+  /chargepoints:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Chargepoint'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all chargepoints
+      tags:
+      - Chargepoints
+  /chargepoints/{id}:
+    get:
+      parameters:
+      - description: Chargepoint ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Chargepoint'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get information about a chargepoint by ID
+      tags:
+      - Chargepoints
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chargepoint ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/endpoints.CreateChargepointRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a new chargepoint
+      tags:
+      - Chargepoints
+  /reservations:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Reservation'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all reservations
+      tags:
+      - Reservations
+  /reservations/{chargepointID}/{connectorID}:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chargepoint ID
+        in: path
+        name: chargepointID
+        required: true
+        type: string
+      - description: Connector ID
+        in: path
+        name: connectorID
+        required: true
+        type: integer
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/endpoints.ReservationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a reservation
+      tags:
+      - Reservations
+  /users:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get all users
+      tags:
+      - Users
+  /users/{id}:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get information about a user by their ID
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/endpoints.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a new user
+      tags:
+      - Users
+swagger: "2.0"

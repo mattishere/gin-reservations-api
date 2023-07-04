@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '${API_HOST_PORT}:${API_CONTAINER_PORT}'
+    depends_on:
+      - mongodb
+    env_file:
+      - .env
+    environment:
+      - IS_CONTAINERIZED=true
+
+  mongodb:
+    image: mongo
+    volumes:
+      # Uncomment if you want to use a local volume
+      #- '${LOCAL_VOLUME_LOCATION}:/data/db'
+
+      - './mongodb-setup.js:/docker-entrypoint-initdb.d/mongodb-setup.js:ro'
+    ports:
+      - '${MONGO_HOST_PORT}:27017'
+    env_file:
+      - .env
